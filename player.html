@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>🎬 WebTorrent Player</title>
+  <script src="https://cdn.jsdelivr.net/npm/webtorrent@latest/webtorrent.min.js"></script>
+  <style>
+    body {
+      background: #000;
+      margin: 0;
+      font-family: sans-serif;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    video {
+      width: 100%;
+      max-height: 80vh;
+    }
+    .info {
+      padding: 8px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="info">🎥 Streaming via WebTorrent...</div>
+  <video id="video" autoplay controls></video>
+
+  <script>
+    const client = new WebTorrent();
+    const magnet = new URLSearchParams(location.search).get("magnet");
+
+    if (!magnet) {
+      document.querySelector(".info").textContent = "❌ No magnet link provided.";
+    } else {
+      client.add(magnet, torrent => {
+        const file = torrent.files.find(f => f.name.endsWith(".mp4") || f.name.endsWith(".mkv"));
+        if (file) {
+          file.renderTo("#video");
+        } else {
+          document.querySelector(".info").textContent = "⚠️ No supported video found.";
+        }
+      });
+    }
+  </script>
+</body>
+</html>
