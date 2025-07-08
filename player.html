@@ -1,51 +1,757 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>🎬 WebTorrent Player</title>
-  <script src="https://cdn.jsdelivr.net/npm/webtorrent@latest/webtorrent.min.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🎬 Premium WebTorrent Player</title>
+<script src="https://cdn.jsdelivr.net/npm/webtorrent@latest/webtorrent.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
   <style>
-    body {
-      background: #000;
+    * {
       margin: 0;
-      font-family: sans-serif;
-      color: white;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      background: linear-gradient(135deg, #0c0c0c 0%, #1a1a1a 100%);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      color: #ffffff;
+      overflow-x: hidden;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .container {
+      flex: 1;
       display: flex;
       flex-direction: column;
       justify-content: center;
       align-items: center;
-      height: 100vh;
+      padding: 20px;
+      position: relative;
     }
+
+    .player-wrapper {
+      position: relative;
+      width: 100%;
+      max-width: 1200px;
+      background: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(20px);
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .status-bar {
+      padding: 20px;
+      text-align: center;
+      background: rgba(0, 0, 0, 0.3);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      transition: all 0.3s ease;
+    }
+
+    .status-icon {
+      font-size: 24px;
+      margin-right: 10px;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes fadeOut {
+      from { opacity: 1; transform: translateY(0); }
+      to { opacity: 0; transform: translateY(-20px); }
+    }
+
+    .fade-in {
+      animation: fadeIn 0.5s ease-out;
+    }
+
+    .fade-out {
+      animation: fadeOut 0.5s ease-out;
+    }
+
+    .video-container {
+      position: relative;
+      width: 100%;
+      background: #000;
+    }
+
     video {
       width: 100%;
-      max-height: 80vh;
+      height: auto;
+      max-height: 70vh;
+      display: block;
+      outline: none;
     }
-    .info {
-      padding: 8px;
+
+    .controls {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
+      padding: 20px;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      transform: translateY(100%);
+      animation: slideUp 0.3s ease forwards;
+    }
+
+    .video-container:hover .controls,
+    .controls.show {
+      opacity: 1;
+    }
+
+    @keyframes slideUp {
+      to { transform: translateY(0); }
+    }
+
+    .progress-container {
+      position: relative;
+      height: 6px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 3px;
+      margin-bottom: 15px;
+      cursor: pointer;
+      overflow: hidden;
+    }
+
+    .progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, #ff6b6b, #4ecdc4);
+      width: 0%;
+      border-radius: 3px;
+      transition: width 0.1s ease;
+      position: relative;
+    }
+
+    .progress-bar::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+      animation: shimmer 2s infinite;
+    }
+
+    @keyframes shimmer {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+
+    .control-buttons {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      flex-wrap: wrap;
+    }
+
+    .control-btn {
+      background: rgba(255, 255, 255, 0.1);
+      border: none;
+      color: white;
+      padding: 10px;
+      border-radius: 50%;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-size: 16px;
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(10px);
+    }
+
+    .control-btn:hover {
+      background: rgba(255, 255, 255, 0.2);
+      transform: scale(1.1);
+    }
+
+    .control-btn:active {
+      transform: scale(0.95);
+    }
+
+    .time-display {
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 14px;
+      margin-left: auto;
+      font-weight: 500;
+    }
+
+    .error-container {
       text-align: center;
+      padding: 40px;
+      background: rgba(220, 53, 69, 0.1);
+      border: 1px solid rgba(220, 53, 69, 0.3);
+      border-radius: 15px;
+      margin: 20px;
+      backdrop-filter: blur(10px);
+    }
+
+    .error-icon {
+      font-size: 48px;
+      color: #dc3545;
+      margin-bottom: 20px;
+    }
+
+    .retry-btn {
+      background: linear-gradient(45deg, #dc3545, #c82333);
+      border: none;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 25px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: 600;
+      transition: all 0.3s ease;
+      margin-top: 20px;
+      box-shadow: 0 4px 15px rgba(220, 53, 69, 0.3);
+    }
+
+    .retry-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(220, 53, 69, 0.4);
+    }
+
+    .loading-spinner {
+      border: 3px solid rgba(255, 255, 255, 0.3);
+      border-top: 3px solid #4ecdc4;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 20px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      margin-top: 20px;
+      padding: 20px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 15px;
+    }
+
+    .info-item {
+      text-align: center;
+      padding: 15px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 10px;
+      transition: all 0.3s ease;
+    }
+
+    .info-item:hover {
+      background: rgba(255, 255, 255, 0.1);
+      transform: translateY(-2px);
+    }
+
+    .info-label {
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.6);
+      text-transform: uppercase;
+      font-weight: 600;
+      margin-bottom: 5px;
+    }
+
+    .info-value {
+      font-size: 16px;
+      font-weight: 500;
+      color: #4ecdc4;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+      .container {
+        padding: 10px;
+      }
+      
+      .player-wrapper {
+        border-radius: 15px;
+      }
+      
+      .controls {
+        padding: 15px;
+      }
+      
+      .control-buttons {
+        gap: 10px;
+      }
+      
+      .control-btn {
+        width: 35px;
+        height: 35px;
+        font-size: 14px;
+      }
+      
+      video {
+        max-height: 60vh;
+      }
+      
+      .info-grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+        padding: 15px;
+      }
+    }
+
+    /* TV/Large Screen Optimizations */
+    @media (min-width: 1200px) {
+      .control-btn {
+        width: 50px;
+        height: 50px;
+        font-size: 18px;
+      }
+      
+      .controls {
+        padding: 30px;
+      }
+      
+      .progress-container {
+        height: 8px;
+      }
+      
+      video {
+        max-height: 80vh;
+      }
+    }
+
+    /* Android TV specific */
+    @media (min-width: 1200px) and (max-height: 800px) {
+      video {
+        max-height: 70vh;
+      }
+      
+      .controls {
+        padding: 20px;
+      }
+    }
+
+    /* Focus states for TV navigation */
+    .control-btn:focus {
+      outline: 2px solid #4ecdc4;
+      outline-offset: 2px;
     }
   </style>
 </head>
 <body>
-  <div class="info">🎥 Streaming via WebTorrent...</div>
-  <video id="video" autoplay controls></video>
+  <div class="container">
+    <div class="player-wrapper">
+      <div class="status-bar" id="statusBar">
+        <i class="fas fa-circle-notch fa-spin status-icon" id="statusIcon"></i>
+        <span id="statusText">Initializing WebTorrent...</span>
+      </div>
+      
+      <div class="video-container" id="videoContainer" style="display: none;">
+        <video id="video" preload="metadata"></video>
+        <div class="controls" id="controls">
+          <div class="progress-container" id="progressContainer">
+            <div class="progress-bar" id="progressBar"></div>
+          </div>
+          <div class="control-buttons">
+            <button class="control-btn" id="playPauseBtn" title="Play/Pause">
+              <i class="fas fa-play"></i>
+            </button>
+            <button class="control-btn" id="muteBtn" title="Mute/Unmute">
+              <i class="fas fa-volume-up"></i>
+            </button>
+            <button class="control-btn" id="fullscreenBtn" title="Fullscreen">
+              <i class="fas fa-expand"></i>
+            </button>
+            <div class="time-display" id="timeDisplay">
+              0:00 / 0:00
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div id="infoGrid" class="info-grid" style="display: none;">
+        <div class="info-item">
+          <div class="info-label">Download Speed</div>
+          <div class="info-value" id="downloadSpeed">0 KB/s</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Upload Speed</div>
+          <div class="info-value" id="uploadSpeed">0 KB/s</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Peers</div>
+          <div class="info-value" id="peersCount">0</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Progress</div>
+          <div class="info-value" id="downloadProgress">0%</div>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <script>
-    const client = new WebTorrent();
-    const magnet = new URLSearchParams(location.search).get("magnet");
+    class WebTorrentPlayer {
+      constructor() {
+        this.client = null;
+        this.torrent = null;
+        this.video = null;
+        this.retryCount = 0;
+        this.maxRetries = 3;
+        this.retryDelay = 2000;
+        this.controlsTimeout = null;
+        
+        this.initializeElements();
+        this.setupEventListeners();
+        this.initialize();
+      }
 
-    if (!magnet) {
-      document.querySelector(".info").textContent = "❌ No magnet link provided.";
-    } else {
-      client.add(magnet, torrent => {
-        const file = torrent.files.find(f => f.name.endsWith(".mp4") || f.name.endsWith(".mkv"));
-        if (file) {
-          file.renderTo("#video");
-        } else {
-          document.querySelector(".info").textContent = "⚠️ No supported video found.";
+      initializeElements() {
+        this.elements = {
+          statusBar: document.getElementById('statusBar'),
+          statusIcon: document.getElementById('statusIcon'),
+          statusText: document.getElementById('statusText'),
+          videoContainer: document.getElementById('videoContainer'),
+          video: document.getElementById('video'),
+          controls: document.getElementById('controls'),
+          progressContainer: document.getElementById('progressContainer'),
+          progressBar: document.getElementById('progressBar'),
+          playPauseBtn: document.getElementById('playPauseBtn'),
+          muteBtn: document.getElementById('muteBtn'),
+          fullscreenBtn: document.getElementById('fullscreenBtn'),
+          timeDisplay: document.getElementById('timeDisplay'),
+          infoGrid: document.getElementById('infoGrid'),
+          downloadSpeed: document.getElementById('downloadSpeed'),
+          uploadSpeed: document.getElementById('uploadSpeed'),
+          peersCount: document.getElementById('peersCount'),
+          downloadProgress: document.getElementById('downloadProgress')
+        };
+      }
+
+      setupEventListeners() {
+        // Video controls
+        this.elements.playPauseBtn.addEventListener('click', () => this.togglePlayPause());
+        this.elements.muteBtn.addEventListener('click', () => this.toggleMute());
+        this.elements.fullscreenBtn.addEventListener('click', () => this.toggleFullscreen());
+        
+        // Progress bar
+        this.elements.progressContainer.addEventListener('click', (e) => this.seek(e));
+        
+        // Video events
+        this.elements.video.addEventListener('loadedmetadata', () => this.onVideoReady());
+        this.elements.video.addEventListener('timeupdate', () => this.updateProgress());
+        this.elements.video.addEventListener('play', () => this.onPlay());
+        this.elements.video.addEventListener('pause', () => this.onPause());
+        this.elements.video.addEventListener('error', (e) => this.onVideoError(e));
+        
+        // Mouse/touch events for controls
+        this.elements.videoContainer.addEventListener('mouseenter', () => this.showControls());
+        this.elements.videoContainer.addEventListener('mouseleave', () => this.hideControls());
+        this.elements.videoContainer.addEventListener('mousemove', () => this.showControls());
+        
+        // Touch events for mobile
+        this.elements.videoContainer.addEventListener('touchstart', () => this.toggleControls());
+        
+        // Keyboard events
+        document.addEventListener('keydown', (e) => this.handleKeyboard(e));
+        
+        // Fullscreen events
+        document.addEventListener('fullscreenchange', () => this.onFullscreenChange());
+        document.addEventListener('webkitfullscreenchange', () => this.onFullscreenChange());
+        document.addEventListener('mozfullscreenchange', () => this.onFullscreenChange());
+        document.addEventListener('MSFullscreenChange', () => this.onFullscreenChange());
+      }
+
+      async initialize() {
+        try {
+          const magnet = new URLSearchParams(window.location.search).get('magnet');
+          
+          if (!magnet) {
+            this.showError('No magnet link provided in URL parameters', 'fas fa-link');
+            return;
+          }
+
+          this.updateStatus('Initializing WebTorrent client...', 'fas fa-cog fa-spin');
+          
+          // Initialize WebTorrent client with optimized settings
+          this.client = new WebTorrent({
+            maxConns: 50,
+            tracker: {
+              announce: []
+            }
+          });
+
+          this.client.on('error', (err) => this.onTorrentError(err));
+          
+          await this.loadTorrent(magnet);
+          
+        } catch (error) {
+          this.onTorrentError(error);
         }
-      });
+      }
+
+      async loadTorrent(magnet) {
+        return new Promise((resolve, reject) => {
+          this.updateStatus('Adding torrent...', 'fas fa-download fa-spin');
+          
+          const torrent = this.client.add(magnet, {
+            announce: ['wss://tracker.btorrent.xyz', 'wss://tracker.openwebtorrent.com']
+          });
+
+          torrent.on('error', reject);
+          torrent.on('warning', (err) => console.warn('Torrent warning:', err));
+          
+          torrent.on('ready', () => {
+            this.torrent = torrent;
+            this.findAndPlayVideo();
+            resolve();
+          });
+
+          torrent.on('download', () => this.updateStats());
+          torrent.on('upload', () => this.updateStats());
+          
+          // Timeout handling
+          setTimeout(() => {
+            if (!torrent.ready) {
+              reject(new Error('Torrent loading timeout'));
+            }
+          }, 30000);
+        });
+      }
+
+      findAndPlayVideo() {
+        const videoExtensions = ['.mp4', '.mkv', '.avi', '.mov', '.webm', '.m4v'];
+        
+        const videoFile = this.torrent.files.find(file => {
+          const ext = file.name.toLowerCase();
+          return videoExtensions.some(extension => ext.endsWith(extension));
+        });
+
+        if (!videoFile) {
+          this.showError('No supported video file found in torrent', 'fas fa-video');
+          return;
+        }
+
+        this.updateStatus(`Loading ${videoFile.name}...`, 'fas fa-play-circle fa-spin');
+        
+        try {
+          videoFile.renderTo(this.elements.video, {
+            autoplay: true,
+            muted: false
+          });
+          
+          this.elements.video.addEventListener('canplay', () => {
+            this.onVideoReady();
+          });
+          
+        } catch (error) {
+          this.onVideoError(error);
+        }
+      }
+
+      onVideoReady() {
+        this.elements.statusBar.style.display = 'none';
+        this.elements.videoContainer.style.display = 'block';
+        this.elements.infoGrid.style.display = 'grid';
+        this.elements.videoContainer.classList.add('fade-in');
+        this.updateStats();
+      }
+
+      updateStats() {
+        if (!this.torrent) return;
+        
+        const formatBytes = (bytes) => {
+          if (bytes === 0) return '0 B';
+          const k = 1024;
+          const sizes = ['B', 'KB', 'MB', 'GB'];
+          const i = Math.floor(Math.log(bytes) / Math.log(k));
+          return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+        };
+
+        this.elements.downloadSpeed.textContent = formatBytes(this.torrent.downloadSpeed) + '/s';
+        this.elements.uploadSpeed.textContent = formatBytes(this.torrent.uploadSpeed) + '/s';
+        this.elements.peersCount.textContent = this.torrent.numPeers;
+        this.elements.downloadProgress.textContent = Math.round(this.torrent.progress * 100) + '%';
+      }
+
+      updateStatus(message, iconClass) {
+        this.elements.statusText.textContent = message;
+        this.elements.statusIcon.className = `status-icon ${iconClass}`;
+      }
+
+      showError(message, iconClass = 'fas fa-exclamation-triangle') {
+        this.elements.statusBar.innerHTML = `
+          <div class="error-container fade-in">
+            <i class="${iconClass} error-icon"></i>
+            <h3>Error</h3>
+            <p>${message}</p>
+            <button class="retry-btn" onclick="location.reload()">
+              <i class="fas fa-redo"></i> Retry
+            </button>
+          </div>
+        `;
+      }
+
+      onTorrentError(error) {
+        console.error('Torrent error:', error);
+        
+        if (this.retryCount < this.maxRetries) {
+          this.retryCount++;
+          this.updateStatus(`Retrying... (${this.retryCount}/${this.maxRetries})`, 'fas fa-redo fa-spin');
+          
+          setTimeout(() => {
+            this.initialize();
+          }, this.retryDelay * this.retryCount);
+        } else {
+          this.showError(`Failed to load torrent: ${error.message}`, 'fas fa-times-circle');
+        }
+      }
+
+      onVideoError(error) {
+        console.error('Video error:', error);
+        this.showError('Video playback error. Please try a different torrent.', 'fas fa-play-circle');
+      }
+
+      // Control functions
+      togglePlayPause() {
+        if (this.elements.video.paused) {
+          this.elements.video.play();
+        } else {
+          this.elements.video.pause();
+        }
+      }
+
+      toggleMute() {
+        this.elements.video.muted = !this.elements.video.muted;
+        this.elements.muteBtn.innerHTML = this.elements.video.muted ? 
+          '<i class="fas fa-volume-mute"></i>' : '<i class="fas fa-volume-up"></i>';
+      }
+
+      toggleFullscreen() {
+        if (!document.fullscreenElement) {
+          this.elements.videoContainer.requestFullscreen().catch(err => {
+            console.error('Error attempting to enable fullscreen:', err);
+          });
+        } else {
+          document.exitFullscreen();
+        }
+      }
+
+      seek(event) {
+        const rect = this.elements.progressContainer.getBoundingClientRect();
+        const pos = (event.clientX - rect.left) / rect.width;
+        this.elements.video.currentTime = pos * this.elements.video.duration;
+      }
+
+      updateProgress() {
+        if (!this.elements.video.duration) return;
+        
+        const progress = (this.elements.video.currentTime / this.elements.video.duration) * 100;
+        this.elements.progressBar.style.width = progress + '%';
+        
+        const formatTime = (seconds) => {
+          const mins = Math.floor(seconds / 60);
+          const secs = Math.floor(seconds % 60);
+          return `${mins}:${secs.toString().padStart(2, '0')}`;
+        };
+        
+        this.elements.timeDisplay.textContent = 
+          `${formatTime(this.elements.video.currentTime)} / ${formatTime(this.elements.video.duration)}`;
+      }
+
+      onPlay() {
+        this.elements.playPauseBtn.innerHTML = '<i class="fas fa-pause"></i>';
+      }
+
+      onPause() {
+        this.elements.playPauseBtn.innerHTML = '<i class="fas fa-play"></i>';
+      }
+
+      onFullscreenChange() {
+        const isFullscreen = document.fullscreenElement || document.webkitFullscreenElement || 
+                           document.mozFullScreenElement || document.msFullscreenElement;
+        
+        this.elements.fullscreenBtn.innerHTML = isFullscreen ? 
+          '<i class="fas fa-compress"></i>' : '<i class="fas fa-expand"></i>';
+      }
+
+      showControls() {
+        this.elements.controls.classList.add('show');
+        clearTimeout(this.controlsTimeout);
+        this.controlsTimeout = setTimeout(() => {
+          this.hideControls();
+        }, 3000);
+      }
+
+      hideControls() {
+        if (!this.elements.video.paused) {
+          this.elements.controls.classList.remove('show');
+        }
+      }
+
+      toggleControls() {
+        const isVisible = this.elements.controls.classList.contains('show');
+        if (isVisible) {
+          this.hideControls();
+        } else {
+          this.showControls();
+        }
+      }
+
+      handleKeyboard(event) {
+        if (event.target.tagName === 'INPUT') return;
+        
+        switch(event.code) {
+          case 'Space':
+            event.preventDefault();
+            this.togglePlayPause();
+            break;
+          case 'KeyM':
+            this.toggleMute();
+            break;
+          case 'KeyF':
+            this.toggleFullscreen();
+            break;
+          case 'ArrowLeft':
+            event.preventDefault();
+            this.elements.video.currentTime -= 10;
+            break;
+          case 'ArrowRight':
+            event.preventDefault();
+            this.elements.video.currentTime += 10;
+            break;
+        }
+      }
     }
+
+    // Initialize the player when DOM is ready
+    document.addEventListener('DOMContentLoaded', () => {
+      new WebTorrentPlayer();
+    });
+
+    // Performance optimization: Update stats less frequently
+    setInterval(() => {
+      if (window.player && window.player.torrent) {
+        window.player.updateStats();
+      }
+    }, 1000);
   </script>
 </body>
 </html>
